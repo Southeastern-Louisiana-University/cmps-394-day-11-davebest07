@@ -1,0 +1,39 @@
+name: Assignment Backend Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        run: docker build -t assignment-backend ./assignment/backend
+
+      - name: Run backend container
+        run: docker run -d --name assignment-backend -p 5000:5000 assignment-backend
+
+      - name: Wait for container to start
+        run: sleep 5
+
+      - name: Verify backend health endpoint
+        run: curl -sf http://localhost:5000/health | grep -q "ok"
+
+      - name: Trivy vulnerability scan
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.69.3 image --ignore-unfixed --severity HIGH,CRITICAL assignment-backend
+
+      - name: Shut down container
+        run: docker stop assignment-backend && docker rm assignment-backend

@@ -1,0 +1,39 @@
+name: Assignment Frontend Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build frontend image
+        run: docker build -t assignment-frontend ./assignment/frontend
+
+      - name: Run frontend container
+        run: docker run -d --name assignment-frontend -p 8080:80 assignment-frontend
+
+      - name: Wait for container to start
+        run: sleep 3
+
+      - name: Verify frontend response
+        run: curl -sf http://localhost:8080 | grep -q "Keycloak OIDC Client"
+
+      - name: Trivy vulnerability scan
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.69.3 image --ignore-unfixed --severity HIGH,CRITICAL assignment-frontend
+
+      - name: Shut down container
+        run: docker stop assignment-frontend && docker rm assignment-frontend

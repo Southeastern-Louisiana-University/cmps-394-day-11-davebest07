@@ -1,0 +1,36 @@
+name: Backend Docker Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        run: docker build -t backend-app ./backend
+
+      - name: Run backend container
+        run: docker run -d --name backend -p 8080:8080 backend-app
+
+      - name: Wait for container to start
+        run: sleep 3
+
+      - name: Verify backend response
+        run: |
+          RESPONSE=$(curl -sf http://localhost:8080)
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q "Hello, World from Go backend!"
+
+      - name: Shut down container
+        run: docker stop backend && docker rm backend

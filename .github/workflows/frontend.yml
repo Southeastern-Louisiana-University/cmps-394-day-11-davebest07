@@ -1,0 +1,36 @@
+name: Frontend Docker Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build frontend image
+        run: docker build -t frontend-app ./frontend
+
+      - name: Run frontend container
+        run: docker run -d --name frontend -p 8080:80 frontend-app
+
+      - name: Wait for container to start
+        run: sleep 3
+
+      - name: Verify frontend response
+        run: |
+          RESPONSE=$(curl -sf http://localhost:8080)
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q "Hello from the frontend!"
+
+      - name: Shut down container
+        run: docker stop frontend && docker rm frontend
